@@ -1,0 +1,179 @@
+<html>
+<head>
+  <meta http-equiv='Content-Type' content='text/html;charset=utf-8'>
+  <title>DC Feeder Patterns</title>
+  <script type='text/javascript' src='http://d3js.org/d3.v3.min.js'></script>
+  <style type='text/css'>
+    body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+    svg { display: block; margin: 0 auto; }
+    svg text { font-size: .85em; }
+  </style>
+</head>
+  <body>
+  
+<script type='text/javascript'>
+
+var m = [20, 20, 20, 20],
+    w = 960 - m[1] - m[3],
+    h = 600 - m[0] - m[2],
+    schoolWidth = 11,
+    schoolHeightScale = 3,
+    schoolVerticalSpacing = 11,
+    textPadding = 5,
+    xLocations = { 'in': 0, 'out': w - schoolWidth },
+    duration = 500,
+    data;
+
+// From D3 Sankey plugin, with changes
+// https://github.com/d3/d3-plugins/blob/master/sankey/sankey.js
+var curvedLink = function () {
+  var curvature = 0.5;
+
+  var link = function (d) {
+    var x0 = w / 2,
+        x1 = d.x,
+        xi = d3.interpolateNumber(x0, x1),
+        x2 = xi(curvature),
+        x3 = xi(1 - curvature),
+        y0 = h / 2,
+        y1 = d.y + d.dy / 2;
+    return "M" + x0 + "," + y0 +
+           "C" + x2 + "," + y0 +
+           " " + x3 + "," + y1 +
+           " " + x1 + "," + y1;
+  };
+
+  link.curvature = function(_) {
+    if (!arguments.length) return curvature;
+    curvature = +_;
+    return link;
+  };
+
+  return link;
+};
+
+var diagonal = curvedLink();
+
+var vis = d3.select('body').append('svg')
+    .attr('width', w + m[1] + m[3])
+    .attr('height', h + m[0] + m[2])
+  .append('g')
+    .attr('transform', 'translate(' + m[3] + ',' + m[0] + ')');
+
+d3.json('data.json', function(json) {
+  data = json;
+});
+
+function unmaskN (v) {
+  if (v === -1) {
+    return 5;
+  }
+  return v;
+}
+
+function unmaskS (v) {
+  if (v === -1) {
+    return '5-9';
+  }
+  return v;
+}
+
+function clickHandler(code) {
+  update(code);
+}
+
+function update(code) {
+  var schools = data[code];
+
+  vis.selectAll('g').remove();
+  vis.selectAll('path').remove();
+
+  render(schools, 'in');
+  render(schools, 'out');
+}
+
+function render(parent, direction) {
+  var schools = parent[direction],
+      heights = [];
+
+  if (schools.length === 0) {
+    return;
+  }
+
+  for (i = 0; i < schools.length; i++) {
+    heights.push(unmaskN(schools[i].n) * schoolHeightScale + schoolVerticalSpacing);
+  }
+
+  var paddingTop = (h - heights.reduce(function (a, b) { return a + b; })) / 2;
+
+  for (i = 0; i < schools.length; i++) {
+    var y = paddingTop;
+
+    for (ix = 0; ix < i; ix++) {
+      y = y + heights[ix];
+    }
+
+    schools[i].y = y;
+  }
+
+  var node = vis.selectAll('g.node' + direction)
+      .data(schools);
+  
+  var nodeEnter = node.enter().append('g')
+      .attr('class', 'node' + direction)
+      .attr('transform', function(d) { return 'translate(' + (w / 2) + ',' + (h / 2) + ')'; })
+      .on('click', function(d) { clickHandler(d.code); });
+
+  nodeEnter.append('rect')
+      .attr('width', schoolWidth)
+      .attr('height', function (d) { return unmaskN(d.n) * schoolHeightScale; });
+
+  nodeEnter.append('text')
+      .attr('x', function() {
+        return direction === 'in' ? textPadding + schoolWidth : -textPadding;
+      })
+      .attr('dy', '.95em')
+      .attr('text-anchor', function() { return direction === 'in' ? 'start' : 'end'; })
+      .text(function(d) { return d.code + ', ' + unmaskS(d.n) + ' students'; })
+      .style('fill-opacity', 1e-6);
+
+  var nodeUpdate = node.transition()
+      .duration(duration)
+      .attr('transform', function(d) {
+        return 'translate(' + xLocations[direction] + ',' + d.y + ')';
+      });
+
+  nodeUpdate.select('text')
+      .style('fill-opacity', 1);
+
+  var link = vis.selectAll('path.link' + direction)
+      .data(schools);
+
+  link.enter().insert('path', 'g')
+      .attr('class', 'link' + direction)
+      .attr('d', function(d) {
+        return diagonal({
+          x: (w / 2),
+          y: (h / 2),
+          dy: 0 });
+      })
+      .style('fill', 'none')
+      .style('stroke', '#000')
+      .style('stroke-opacity', 0.1)
+    .transition()
+      .duration(duration)
+      .attr('d', function(d) {
+        return diagonal({
+          x: xLocations[direction],
+          y: d.y,
+          dy: unmaskN(d.n) * schoolHeightScale
+        });
+      })
+      .style('stroke-width', function (d) { return unmaskN(d.n) * schoolHeightScale; });
+}
+
+</script>
+  
+
+  </body>
+</html>
