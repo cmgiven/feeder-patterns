@@ -2,24 +2,25 @@
 <head>
   <meta http-equiv='Content-Type' content='text/html;charset=utf-8'>
   <title>DC's Actual Feeder Patterns</title>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
   <script type='text/javascript' src='http://d3js.org/d3.v3.min.js'></script>
   <style type='text/css'>
     body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
-    #main { position: relative; width: 960px; height: 600px; margin: 0 auto; }
+    #main { position: relative; width: 1200px; height: 600px; margin: 0 auto; }
     h1, h2 { text-align: center; margin-bottom: 0; }
     p { margin: 0; }
     p.lead { text-align: center; font-size: 19px; }
     #school-bg {
       position: absolute;
       width: 320px; height: 500px;
-      top: 100px; left: 320px;
+      top: 100px; left: 440px;
       background: #fff;
       z-index: 2;
     }
     #school {
       position: absolute;
-      width: 320px; height: 400px;
-      top: 80px; left: 295px;
+      width: 280px; height: 400px;
+      top: 80px; left: 435px;
       text-align: center;
       background: #fff;
       border: 5px solid #63c6db;
@@ -30,6 +31,7 @@
       z-index: 100;
       padding: 20px;
     }
+    select { max-width: 100%; }
     .school-directions {
       display: block;
       position: absolute;
@@ -62,7 +64,7 @@
       display: block;
       position: absolute;
       bottom: 20px; left: 20px;
-      width: 150px; height: 62px;
+      width: 110px; height: 72px;
       -moz-border-radius: 10px;
       -webkit-border-radius: 10px;
       border-radius: 10px;
@@ -71,7 +73,7 @@
       color: #fff;
       text-decoration: none;
       text-align: left;
-      padding: 26px 20px 0 150px;
+      padding: 16px 20px 0 150px;
       font-weight: 700;
     }
     #school-button:hover { background-color: #53b6cb; }
@@ -92,7 +94,7 @@
         <select id="school-select">
           <option value="" disabled selected>Select a school...</option>
         </select>
-        <div id="school-details">
+        <div id="school-details" style="display: none;">
           <h2 id="school-name">School Name</h2>
           <p id="school-grade">Grades 9-12</p>
           <span id="school-in" class="school-directions">
@@ -101,171 +103,284 @@
           <span id="school-out" class="school-directions">
             Students leaving this school
           </span>
-          <a href="#" id="school-button">Explore this school on LearnDC</a>
+          <a href="#" id="school-button" target="_blank">Explore this school on LearnDC</a>
         </div>
       </div>
     </div>
   
 <script type='text/javascript'>
 
-var m = [20, 20, 20, 20],
-    w = 960 - m[1] - m[3],
-    h = 600 - m[0] - m[2],
-    schoolWidth = 11,
-    schoolHeightScale = 3,
-    schoolVerticalSpacing = 11,
-    textPadding = 5,
-    xLocations = { 'in': 0, 'out': w - schoolWidth },
-    duration = 500,
-    data;
+$(function() {
 
-// From D3 Sankey plugin, with changes
-// https://github.com/d3/d3-plugins/blob/master/sankey/sankey.js
-var curvedLink = function () {
-  var curvature = 0.5;
+  var m = [20, 20, 20, 20],
+      w = 1200 - m[1] - m[3],
+      h = 600 - m[0] - m[2],
+      schoolWidth = 11,
+      schoolHeightScale = 3,
+      schoolVerticalSpacing = 11,
+      textPadding = 5,
+      xLocations = { 'in': 0, 'out': w - schoolWidth },
+      duration = 500,
+      schoolData,
+      data;
 
-  var link = function (d) {
-    var x0 = w / 2,
-        x1 = d.x,
-        xi = d3.interpolateNumber(x0, x1),
-        x2 = xi(curvature),
-        x3 = xi(1 - curvature),
-        y0 = h / 2,
-        y1 = d.y + d.dy / 2;
-    return "M" + x0 + "," + y0 +
-           "C" + x2 + "," + y0 +
-           " " + x3 + "," + y1 +
-           " " + x1 + "," + y1;
-  };
+  // From D3 Sankey plugin, with changes
+  // https://github.com/d3/d3-plugins/blob/master/sankey/sankey.js
+  var curvedLink = function () {
+    var curvature = 0.5;
 
-  link.curvature = function(_) {
-    if (!arguments.length) return curvature;
-    curvature = +_;
+    var link = function (d) {
+      var x0 = w / 2,
+          x1 = d.x,
+          xi = d3.interpolateNumber(x0, x1),
+          x2 = xi(curvature),
+          x3 = xi(1 - curvature),
+          y0 = h / 2,
+          y1 = d.y + d.dy / 2;
+      return "M" + x0 + "," + y0 +
+             "C" + x2 + "," + y0 +
+             " " + x3 + "," + y1 +
+             " " + x1 + "," + y1;
+    };
+
+    link.curvature = function(_) {
+      if (!arguments.length) return curvature;
+      curvature = +_;
+      return link;
+    };
+
     return link;
   };
 
-  return link;
-};
+  var diagonal = curvedLink();
 
-var diagonal = curvedLink();
+  var vis = d3.select('#main').append('svg')
+      .attr('width', w + m[1] + m[3])
+      .attr('height', h + m[0] + m[2])
+    .append('g')
+      .attr('transform', 'translate(' + m[3] + ',' + m[0] + ')');
 
-var vis = d3.select('#main').append('svg')
-    .attr('width', w + m[1] + m[3])
-    .attr('height', h + m[0] + m[2])
-  .append('g')
-    .attr('transform', 'translate(' + m[3] + ',' + m[0] + ')');
+  d3.json('data.json', function(json) {
+    data = json;
+  });
 
-d3.json('data.json', function(json) {
-  data = json;
-});
-
-function unmaskN (v) {
-  if (v === -1) {
-    return 5;
-  }
-  return v;
-}
-
-function unmaskS (v) {
-  if (v === -1) {
-    return '5-9';
-  }
-  return v;
-}
-
-function clickHandler(code) {
-  update(code);
-}
-
-function update(code) {
-  var schools = data[code];
-
-  vis.selectAll('g').remove();
-  vis.selectAll('path').remove();
-
-  render(schools, 'in');
-  render(schools, 'out');
-}
-
-function render(parent, direction) {
-  var schools = parent[direction],
-      heights = [];
-
-  if (schools.length === 0) {
-    return;
+  function unmaskN (v) {
+    if (v === -1) {
+      return 5;
+    }
+    return v;
   }
 
-  for (i = 0; i < schools.length; i++) {
-    heights.push(unmaskN(schools[i].n) * schoolHeightScale + schoolVerticalSpacing);
+  function unmaskS (v) {
+    if (v === -1) {
+      return '5-9';
+    }
+    return v;
   }
 
-  var paddingTop = (h - heights.reduce(function (a, b) { return a + b; })) / 2;
+  function getGradesString(arr) {
+      var numeric = {
+              "PS": -2,
+              "PK": -1,
+              "KG": 0,
+              "AO": 14,
+              "UN": 16
+          },
+          numArr = [],
+          currentRun = [],
+          runs = [],
+          spelledOut = {
+              "-2": "Preschool",
+              "-1": "Pre-Kindergarten",
+              "0": "Kindergarten",
+              "14": "Adult",
+              "16": "Ungraded"
+          },
+          string = "",
+          gradesUsed = false;
 
-  for (i = 0; i < schools.length; i++) {
-    var y = paddingTop;
+      for (i = 0; i < arr.length; i++) {
+          num = (isNaN(arr[i])) ? numeric[arr[i]] : parseInt(arr[i], 10);
+          numArr.push(num);
+      }
+      numArr.sort(function (a, b) { return a - b; });
 
-    for (ix = 0; ix < i; ix++) {
-      y = y + heights[ix];
+      for (i = 0; i < numArr.length; i++) {
+          if (i === 0 || numArr[i] === currentRun[currentRun.length - 1] + 1) {
+              currentRun.push(numArr[i]);
+          } else {
+              runs.push(currentRun);
+              currentRun = [numArr[i]];
+          }
+          if (i === numArr.length - 1) {
+              runs.push(currentRun);
+          }
+      }
+
+      for (i = 0; i < runs.length; i++) {
+          var plural = runs[i].length > 1;
+          if (runs[i][0] > 0 && runs[i][0] < 13) {
+              if (plural) {
+                  if (!gradesUsed) {
+                      string += "Grades ";
+                      gradesUsed = true;
+                  }
+                  string += +runs[i][0] + "&ndash;" + runs[i][runs[i].length - 1];
+              } else {
+                  if (!gradesUsed) {
+                      string += "Grade ";
+                  }
+                  string += runs[i][0];
+              }
+          } else {
+              string += spelledOut[runs[i][0]];
+              if (plural) {
+                  string += "&ndash;";
+                  if (runs[i][runs[i].length - 1] > 0) {
+                      string += "Grade " + runs[i][runs[i].length - 1];
+                  } else {
+                      string += spelledOut[runs[i][runs[i].length - 1]];
+                  }
+              }
+          }
+          if (i !== runs.length - 1) {
+              string += ", ";
+          }
+      }
+
+      return string;
+  }
+
+  function clickHandler(code) {
+    $('#school-select').children().prop('selected', false);
+    $('#school-select option[value="' + code + '"]').prop('selected', true);
+    update(code);
+  }
+
+  function update(code) {
+    var schools = data[code],
+        info = $.grep(schoolData, function (s) { return s.code == code; })[0],
+        four = code.length === 4 ? code : '0' + code;
+
+    $('#school-details').show();
+
+    $('#school-name').html(info.name);
+    $('#school-grade').html(getGradesString(info.grades));
+    $('#school-button').attr('href', 'http://www.learndc.org/schoolprofiles/view#' + four + '/overview');
+
+    vis.selectAll('g').remove();
+    vis.selectAll('path').remove();
+
+    render(schools, 'in');
+    render(schools, 'out');
+  }
+
+  function render(parent, direction) {
+    var schools = parent[direction],
+        heights = [];
+
+    if (schools.length === 0) {
+      return;
     }
 
-    schools[i].y = y;
+    for (i = 0; i < schools.length; i++) {
+      heights.push(unmaskN(schools[i].n) * schoolHeightScale + schoolVerticalSpacing);
+    }
+
+    var paddingTop = (h - heights.reduce(function (a, b) { return a + b; })) / 2;
+
+    for (i = 0; i < schools.length; i++) {
+      var y = paddingTop;
+
+      for (ix = 0; ix < i; ix++) {
+        y = y + heights[ix];
+      }
+
+      schools[i].y = y;
+    }
+
+    var node = vis.selectAll('g.node' + direction)
+        .data(schools);
+    
+    var nodeEnter = node.enter().append('g')
+        .attr('class', 'node' + direction)
+        .attr('transform', function(d) { return 'translate(' + (w / 2) + ',' + (h / 2) + ')'; })
+        .on('click', function(d) { clickHandler(d.code); });
+
+    nodeEnter.append('rect')
+        .attr('width', schoolWidth)
+        .attr('height', function (d) { return unmaskN(d.n) * schoolHeightScale; });
+
+    nodeEnter.append('text')
+        .attr('x', function() {
+          return direction === 'in' ? textPadding + schoolWidth : -textPadding;
+        })
+        .attr('dy', '.95em')
+        .attr('text-anchor', function() { return direction === 'in' ? 'start' : 'end'; })
+        .text(function(d) {
+          var info = $.grep(schoolData, function (s) { return s.code == d.code; })[0],
+              label = info ? info.name : d.code;
+          return label + ', ' + unmaskS(d.n) + ' students';
+        })
+        .style('fill-opacity', 1e-6);
+
+    var nodeUpdate = node.transition()
+        .duration(duration)
+        .attr('transform', function(d) {
+          return 'translate(' + xLocations[direction] + ',' + d.y + ')';
+        });
+
+    nodeUpdate.select('text')
+        .style('fill-opacity', 1);
+
+    var link = vis.selectAll('path.link' + direction)
+        .data(schools);
+
+    link.enter().insert('path', 'g')
+        .attr('class', 'link' + direction)
+        .attr('d', function(d) {
+          return diagonal({
+            x: (w / 2),
+            y: (h / 2),
+            dy: 0 });
+        })
+        .style('fill', 'none')
+        .style('stroke', '#63c6db')
+        .style('stroke-opacity', 0.2)
+      .transition()
+        .duration(duration)
+        .attr('d', function(d) {
+          return diagonal({
+            x: xLocations[direction],
+            y: d.y,
+            dy: unmaskN(d.n) * schoolHeightScale
+          });
+        })
+        .style('stroke-width', function (d) { return unmaskN(d.n) * schoolHeightScale; });
   }
 
-  var node = vis.selectAll('g.node' + direction)
-      .data(schools);
-  
-  var nodeEnter = node.enter().append('g')
-      .attr('class', 'node' + direction)
-      .attr('transform', function(d) { return 'translate(' + (w / 2) + ',' + (h / 2) + ')'; })
-      .on('click', function(d) { clickHandler(d.code); });
+  $.getJSON('schools.json', function (json) {
+    schoolData = json;
 
-  nodeEnter.append('rect')
-      .attr('width', schoolWidth)
-      .attr('height', function (d) { return unmaskN(d.n) * schoolHeightScale; });
+    function sortByName(a, b){
+      var aName = a.name.toLowerCase();
+      var bName = b.name.toLowerCase(); 
+      return ((aName < bName) ? -1 : ((aName > bName) ? 1 : 0));
+    }
 
-  nodeEnter.append('text')
-      .attr('x', function() {
-        return direction === 'in' ? textPadding + schoolWidth : -textPadding;
-      })
-      .attr('dy', '.95em')
-      .attr('text-anchor', function() { return direction === 'in' ? 'start' : 'end'; })
-      .text(function(d) { return d.code + ', ' + unmaskS(d.n) + ' students'; })
-      .style('fill-opacity', 1e-6);
+    schoolData.sort(sortByName);
 
-  var nodeUpdate = node.transition()
-      .duration(duration)
-      .attr('transform', function(d) {
-        return 'translate(' + xLocations[direction] + ',' + d.y + ')';
-      });
+    $.each(schoolData, function (i, school) {
+      $('#school-select').append('<option value="' + school.code + '">' + school.name + '</option>');
+    });
+  });
 
-  nodeUpdate.select('text')
-      .style('fill-opacity', 1);
+  $('#school-select').change(function () {
+    var schoolCode = $('#school-select').find(":selected").attr("value");
+    update(schoolCode);
+  });
 
-  var link = vis.selectAll('path.link' + direction)
-      .data(schools);
-
-  link.enter().insert('path', 'g')
-      .attr('class', 'link' + direction)
-      .attr('d', function(d) {
-        return diagonal({
-          x: (w / 2),
-          y: (h / 2),
-          dy: 0 });
-      })
-      .style('fill', 'none')
-      .style('stroke', '#63c6db')
-      .style('stroke-opacity', 0.2)
-    .transition()
-      .duration(duration)
-      .attr('d', function(d) {
-        return diagonal({
-          x: xLocations[direction],
-          y: d.y,
-          dy: unmaskN(d.n) * schoolHeightScale
-        });
-      })
-      .style('stroke-width', function (d) { return unmaskN(d.n) * schoolHeightScale; });
-}
+});
 
 </script>
   
