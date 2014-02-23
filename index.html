@@ -1,15 +1,110 @@
 <html>
 <head>
   <meta http-equiv='Content-Type' content='text/html;charset=utf-8'>
-  <title>DC Feeder Patterns</title>
+  <title>DC's Actual Feeder Patterns</title>
   <script type='text/javascript' src='http://d3js.org/d3.v3.min.js'></script>
   <style type='text/css'>
     body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; }
-    svg { display: block; margin: 0 auto; }
+    #main { position: relative; width: 960px; height: 600px; margin: 0 auto; }
+    h1, h2 { text-align: center; margin-bottom: 0; }
+    p { margin: 0; }
+    p.lead { text-align: center; font-size: 19px; }
+    #school-bg {
+      position: absolute;
+      width: 320px; height: 500px;
+      top: 100px; left: 320px;
+      background: #fff;
+      z-index: 2;
+    }
+    #school {
+      position: absolute;
+      width: 320px; height: 400px;
+      top: 80px; left: 295px;
+      text-align: center;
+      background: #fff;
+      border: 5px solid #63c6db;
+      -moz-border-radius: 25px;
+      -webkit-border-radius: 25px;
+      border-radius: 25px;
+      -khtml-border-radius: 25px;
+      z-index: 100;
+      padding: 20px;
+    }
+    .school-directions {
+      display: block;
+      position: absolute;
+      top: 178px;
+      background: #63c6db;
+      color: #fff;
+      font-size: .85em;
+      height: 39px;
+      width: 120px;
+      padding: 5px 30px 0 20px;
+      text-align: left;
+      -moz-border-radius: 3px;
+      -webkit-border-radius: 3px;
+      border-radius: 3px;
+      -khtml-border-radius: 3px;
+    }
+    .school-directions:after {
+      display: block;
+      width: 0; height: 0;
+      content: "";
+      position: absolute;
+      right: 15px; top: 12px;
+      border-top: 10px solid transparent;
+      border-bottom: 10px solid transparent;
+      border-left: 10px solid #fff;
+    }
+    #school-in { left: -85px; }
+    #school-out { right: -85px; }
+    #school-button {
+      display: block;
+      position: absolute;
+      bottom: 20px; left: 20px;
+      width: 150px; height: 62px;
+      -moz-border-radius: 10px;
+      -webkit-border-radius: 10px;
+      border-radius: 10px;
+      -khtml-border-radius: 10px;
+      background: #63c6db url('img/learndc.png') no-repeat 20px center;
+      color: #fff;
+      text-decoration: none;
+      text-align: left;
+      padding: 26px 20px 0 150px;
+      font-weight: 700;
+    }
+    #school-button:hover { background-color: #53b6cb; }
+    svg { display: block; position: absolute; top: 0;}
     svg text { font-size: .85em; }
+    svg g.nodein rect { fill: #63c6db;}
+    svg g.nodeout rect { fill: #63c6db;}
+    svg g.nodein:hover rect { fill: #53b6cb;}
+    svg g.nodeout:hover rect { fill: #53b6cb;}
   </style>
 </head>
   <body>
+    <div id="main">
+      <h1>DC's <u>Actual</u> Feeder Patterns</h1>
+      <p class="lead">Student movement between schools, 2011-2012</p>
+      <div id="school-bg"></div>
+      <div id="school">
+        <select id="school-select">
+          <option value="" disabled selected>Select a school...</option>
+        </select>
+        <div id="school-details">
+          <h2 id="school-name">School Name</h2>
+          <p id="school-grade">Grades 9-12</p>
+          <span id="school-in" class="school-directions">
+            Students arriving at this school
+          </span>
+          <span id="school-out" class="school-directions">
+            Students leaving this school
+          </span>
+          <a href="#" id="school-button">Explore this school on LearnDC</a>
+        </div>
+      </div>
+    </div>
   
 <script type='text/javascript'>
 
@@ -54,7 +149,7 @@ var curvedLink = function () {
 
 var diagonal = curvedLink();
 
-var vis = d3.select('body').append('svg')
+var vis = d3.select('#main').append('svg')
     .attr('width', w + m[1] + m[3])
     .attr('height', h + m[0] + m[2])
   .append('g')
@@ -158,8 +253,8 @@ function render(parent, direction) {
           dy: 0 });
       })
       .style('fill', 'none')
-      .style('stroke', '#000')
-      .style('stroke-opacity', 0.1)
+      .style('stroke', '#63c6db')
+      .style('stroke-opacity', 0.2)
     .transition()
       .duration(duration)
       .attr('d', function(d) {
