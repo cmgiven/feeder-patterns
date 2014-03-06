@@ -8,13 +8,13 @@ OUTPUT_FILE = "data.json"
 data = []
 schools = {}
 
-CSV.foreach('odd2014-feeder-pattern-enrollment-sy1112.csv', :headers => true, :header_converters => :symbol, :converters => :all) do |row|
+CSV.foreach('odd2014-feeder-pattern-enrollment-sy1112-remapped.csv', :headers => true, :header_converters => :symbol, :converters => :all) do |row|
   data.push(Hash[row.headers[0..-1].zip(row.fields[0..-1])])
 end
 
 school_codes = data.map { |r| r[:school_code] }
 school_codes = school_codes + data.map { |r| r[:new_school_code] }
-school_codes.reject! { |code| code == '' }
+school_codes.reject! { |code| !code || code == '' }
 school_codes.uniq!.sort!
 
 school_codes.each do |code|
@@ -29,6 +29,8 @@ school_codes.each do |code|
 
 		case r[:new_school_code]
 		when code
+			# Do nothing.
+		when nil
 			# Do nothing.
 		when ''
 			# Do nothing.
