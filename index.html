@@ -266,7 +266,7 @@ $(function() {
 
     $('#school-name').html(info.name);
     $('#school-grade').html(getGradesString(info.grades));
-    $('#school-button').attr('href', 'http://www.learndc.org/schoolprofiles/view#' + four + '/overview');
+    $('#school-button').attr('href', 'http://www.learndc.org/schoolprofiles/view?s=' + four + '#overview');
 
     vis.selectAll('g').remove();
     vis.selectAll('path').remove();
